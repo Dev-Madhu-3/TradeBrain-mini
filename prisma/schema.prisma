@@ -1,0 +1,146 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String?
+  avatar        String?
+  traderLevel   String   @default("beginner") // beginner, intermediate, pro, expert
+  tiqsScore     Int      @default(0)
+  totalPnl      Float    @default(0)
+  winRate       Float    @default(0)
+  totalTrades   Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  trades        Trade[]
+  strategies    Strategy[]
+  achievements  UserAchievement[]
+  streaks       Streak[]
+  brokerImports BrokerImport[]
+
+  @@map("users")
+}
+
+model Trade {
+  id           String   @id @default(cuid())
+  userId       String
+  symbol       String
+  type         String   // Long, Short
+  strategy     String?
+  entryPrice   Float
+  exitPrice    Float?
+  quantity     Int
+  pnl          Float
+  fees         Float    @default(0)
+  status       String   @default("open") // open, closed, cancelled
+  notes        String?
+  tags         String?  // JSON array of tags
+  screenshots  String?  // JSON array of screenshot URLs
+  entryDate    DateTime
+  exitDate     DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("trades")
+}
+
+model Strategy {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  description String?
+  tags        String?  // JSON array of tags
+  isActive    Boolean  @default(true)
+  winRate     Float    @default(0)
+  totalTrades Int      @default(0)
+  totalPnl    Float    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("strategies")
+}
+
+model Achievement {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  icon        String
+  category    String   // trading, consistency, risk, volume
+  condition   String   // JSON object describing achievement condition
+  createdAt   DateTime @default(now())
+
+  // Relations
+  userAchievements UserAchievement[]
+
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id            String   @id @default(cuid())
+  userId        String
+  achievementId String
+  progress      Int      @default(0)
+  earnedAt      DateTime?
+  createdAt     DateTime @default(now())
+
+  // Relations
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@map("user_achievements")
+}
+
+model Streak {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   // win_streak, trade_streak, profit_streak
+  count     Int      @default(0)
+  startDate DateTime
+  endDate   DateTime?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("streaks")
+}
+
+model BrokerImport {
+  id           String   @id @default(cuid())
+  userId       String
+  brokerName   String   // zerodha, dhan, upstox, etc.
+  fileName     String
+  importStatus String   @default("pending") // pending, processing, completed, failed
+  tradesCount  Int      @default(0)
+  errorLog     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("broker_imports")
+}
